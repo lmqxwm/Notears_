@@ -2,6 +2,7 @@ import numpy as np
 import scipy.linalg as slin
 import scipy.optimize as sopt
 from scipy.special import expit as sigmoid
+import time
 
 
 def notears_linear(X, lambda1, loss_type, max_iter=100, h_tol=1e-8, rho_max=1e+16, w_threshold=0.3):
@@ -57,7 +58,13 @@ def notears_linear(X, lambda1, loss_type, max_iter=100, h_tol=1e-8, rho_max=1e+1
         W = _adj(w)
         loss, G_loss = _loss(W)
         h, G_h = _h(W)
-        obj = loss + 0.5 * rho * h * h + alpha * h + lambda1 * w.sum()
+        if not all(w>=0):
+            nowtime=str(time.ctime())
+            print("WRONG!!!!!!!!" + nowtime)
+            with open("wrong.txt","a") as file:
+                file.write(nowtime + "\n")
+
+        obj = loss + 0.5 * rho * h * h + alpha * h + lambda1 * np.abs(w).sum()
         G_smooth = G_loss + (rho * h + alpha) * G_h
         g_obj = np.concatenate((G_smooth + lambda1, - G_smooth + lambda1), axis=None)
         return obj, g_obj
@@ -83,7 +90,15 @@ def notears_linear(X, lambda1, loss_type, max_iter=100, h_tol=1e-8, rho_max=1e+1
             break
     W_est = _adj(w_est)
     W_est[np.abs(W_est) < w_threshold] = 0
-    return W_est
+
+    loss_est, _ = _loss(W_est)
+    loss_l1 = loss_est + lambda1 * np.abs(w_est).sum()
+    obj_new = loss_l1 + 0.5 * rho * h * h
+    obj_dual, _ = _func(w_est)
+    return loss_est, loss_l1, obj_new, obj_dual, h
+
+    #return W_est
+
 
 
 if __name__ == '__main__':
