@@ -25,8 +25,8 @@ def estimate_once(n, d, s0, graph_type, sem_type, lambda1=0.1, loss_type='l2'):
 def estimate_one_seed(seed=1):
     print("=============processing seed=", seed, "================")
     utils.set_random_seed(seed)
-    ds = [5, 10, 20, 40]
-    ns = [5, 10, 20, 40]
+    ds = [5, 10, 20, 30]
+    ns = [5, 10, 20, 30]
     #graphtypes = ["ER", "SF", "BP"]
     semtypes = ["gauss", "exp", "gumbel", "uniform", "logistic", "poisson"]
     lambdas = [0.01, 0.1, 1, 10]
@@ -35,8 +35,14 @@ def estimate_one_seed(seed=1):
     result = pd.DataFrame(result, columns=["n", "d", "s0", "graph_type", "sem_type", "lambda1", "loss_type", "loss_est", "loss_l1", "obj_aug", "obj_dual", "h"])
     #t1 = time.time()
     count = 0
-    for lam in range(len(lambdas)):
-        for l in range(len(losstypes)):
+    for l in range(len(losstypes)):
+        if losstypes[l] == 'l2':
+            lambdas = [0.1, 1]
+            semtypes = ["gauss", "exp", "gumbel", "uniform"]
+        else:
+            lambdas = [0.01, 1]
+            semtypes = ["logistic", "poisson"]
+        for lam in range(len(lambdas)):
             for dd in range(len(ds)):
                 #s0s = [1, ds[dd], 2*ds[dd], int(math.comb(ds[dd], 2)/2)]
                 # if ds[dd] > 7 and graphtypes[g] != "BP":
