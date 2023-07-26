@@ -5,7 +5,7 @@ from scipy.special import expit as sigmoid
 import time
 
 
-def notears_linear(X, lambda1, loss_type, max_iter=100, h_tol=1e-8, rho_max=1e+16, w_threshold=0.3):
+def notears_linear(X, lambda1, loss_type, W_true, max_iter=100, h_tol=1e-8, rho_max=1e+16, w_threshold=0.3):
     """Solve min_W L(W; X) + lambda1 ‖W‖_1 s.t. h(W) = 0 using augmented Lagrangian.
 
     Args:
@@ -68,12 +68,21 @@ def notears_linear(X, lambda1, loss_type, max_iter=100, h_tol=1e-8, rho_max=1e+1
         G_smooth = G_loss + (rho * h + alpha) * G_h
         g_obj = np.concatenate((G_smooth + lambda1, - G_smooth + lambda1), axis=None)
         return obj, g_obj
+    
+    def _losses(W):
+        """Evaluate value and gradient of augmented Lagrangian for doubled variables ([2 d^2] array)."""
+        loss_est, _ = _loss(W)
+        h, _ = _h(W)
+        loss_l1 = loss_est + lambda1 * np.abs(W).sum()
+        obj_new = loss_l1 + 0.5 * rho * h * h 
+        obj_dual = obj_new + alpha * h
+        return loss_est, loss_l1, obj_new, obj_dual, h
 
     n, d = X.shape
     w_est, rho, alpha, h = np.zeros(2 * d * d), 1.0, 0.0, np.inf  # double w_est into (w_pos, w_neg)
     bnds = [(0, 0) if i == j else (0, None) for _ in range(2) for i in range(d) for j in range(d)]
-    if loss_type == 'l2':
-        X = X - np.mean(X, axis=0, keepdims=True)
+    # if loss_type == 'l2':
+    #     X = X - np.mean(X, axis=0, keepdims=True)
     for _ in range(max_iter):
         w_new, h_new = None, None
         while rho < rho_max:
@@ -89,13 +98,14 @@ def notears_linear(X, lambda1, loss_type, max_iter=100, h_tol=1e-8, rho_max=1e+1
         if h <= h_tol or rho >= rho_max:
             break
     W_est = _adj(w_est)
-    W_est[np.abs(W_est) < w_threshold] = 0
+    W_est2 = W_est.copy()
+    W_est2[np.abs(W_est2) < w_threshold] = 0
 
-    loss_est, _ = _loss(W_est)
-    loss_l1 = loss_est + lambda1 * np.abs(w_est).sum()
-    obj_new = loss_l1 + 0.5 * rho * h * h
-    obj_dual, _ = _func(w_est)
-    return loss_est, loss_l1, obj_new, obj_dual, h
+    loss_est, loss_l1, obj_new, obj_dual, h = _losses(W_est)
+    loss_est2, loss_l12, obj_new2, obj_dual2, h2 = _losses(W_est2)
+    loss_est3, loss_l13, obj_new3, obj_dual3, h3 = _losses(W_true)
+
+    return loss_est, loss_l1, obj_new, obj_dual, h, loss_est2, loss_l12, obj_new2, obj_dual2, h2, loss_est3, loss_l13, obj_new3, obj_dual3, h3
 
     #return W_est
 

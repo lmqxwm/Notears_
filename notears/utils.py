@@ -107,7 +107,7 @@ def simulate_linear_sem(W, n, sem_type, noise_scale=None):
         elif sem_type == 'logistic':
             x = np.random.binomial(1, sigmoid(X @ w)) * 1.0
         elif sem_type == 'poisson':
-            x = np.random.poisson(X.astype(np.float64) @ w.astype(np.float64)) * 1.0 # not exp
+            x = np.random.poisson(np.exp(X.astype(np.float64) @ w.astype(np.float64))) * 1.0 # not exp
         else:
             raise ValueError('unknown sem type')
         return x
@@ -134,11 +134,13 @@ def simulate_linear_sem(W, n, sem_type, noise_scale=None):
     G = ig.Graph.Weighted_Adjacency(W.tolist())
     ordered_vertices = G.topological_sorting()
     assert len(ordered_vertices) == d
-    X = np.zeros([n, d])
+    X = np.ones([n, d])
     for j in ordered_vertices:
         parents = G.neighbors(j, mode=ig.IN)
         #print(j, parents)
         #print(np.max(np.exp(X[:, parents].astype(np.float64) @ W[parents, j].astype(np.float64))))
+        #print(X[:, parents], W[parents, j])
+        #if len(parents) > 0:
         X[:, j] = _simulate_single_equation(X[:, parents], W[parents, j], scale_vec[j])
     return X
 

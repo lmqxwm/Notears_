@@ -25,20 +25,23 @@ def estimate_once(n, d, s0, graph_type, sem_type, lambda1=0.1, loss_type='l2'):
 def estimate_one_seed(seed=1):
     print("=============processing seed=", seed, "================")
     utils.set_random_seed(seed)
-    ds = [10, 20, 40, 60, 80, 10, 10, 10]
-    ns = [10, 10, 10, 10, 10, 100, 500, 1000]
+    ds = [15, 25, 40, 60, 80]
+    ns = [15, 15, 15, 15, 15]
     #graphtypes = ["ER", "SF", "BP"]
     semtypes = ["gauss", "exp", "gumbel", "uniform"]
     lambdas = [0]
     losstypes = ["l2"]
-    result = np.zeros([len(ds)*len(ns)*len(lambdas)*len(semtypes)*len(losstypes), 12])
-    result = pd.DataFrame(result, columns=["n", "d", "s0", "graph_type", "sem_type", "lambda1", "loss_type", "loss_est", "loss_l1", "obj_aug", "obj_dual", "h"])
+    result = np.zeros([len(ds)*len(ns)*len(lambdas)*len(semtypes)*len(losstypes), 22])
+    result = pd.DataFrame(result, columns=["n", "d", "s0", "graph_type", "sem_type", "lambda1", "loss_type", \
+    "loss_est", "loss_l1", "obj_aug", "obj_dual", "h",
+    "loss_est_2", "loss_l1_2", "obj_aug_", "obj_dual_2", "h_2",
+    "loss_est_t", "loss_l1_t", "obj_aug_t", "obj_dual_t", "h_t",])
     #t1 = time.time()
     count = 0
     
     for lam in range(len(lambdas)):
         for dd in range(len(ds)):
-            s0s = [ds[dd]]
+            s0s = [ds[dd], 15]
             #s0s = [1, ds[dd], 2*ds[dd], int(math.comb(ds[dd], 2)/2)]
             # if ds[dd] > 7 and graphtypes[g] != "BP":
             #     s0s = [1, int(ds[dd]/2), ds[dd]-1, 2*ds[dd], 3*ds[dd]]
@@ -59,7 +62,7 @@ def estimate_one_seed(seed=1):
                     lambda1 = lambdas[lam]
                     loss_type = losstypes[0]
                     result.iloc[count, 0:7] = n, d, s0, graph_type, sem_type, lambda1, loss_type
-                    result.iloc[count, 7:12] = estimate_once(n, d, s0, graph_type, sem_type, lambda1, loss_type)
+                    result.iloc[count, 7:22] = estimate_once(n, d, s0, graph_type, sem_type, lambda1, loss_type)
                     count += 1
                     print( "n, d, s0, graph_type, sem_type, lambda1, loss_type", "-", n, d, s0, graph_type, sem_type, lambda1, loss_type)
                     result.to_csv("./results_loss/result_"+str(seed)+".csv", index=False)
@@ -70,7 +73,7 @@ if __name__ == '__main__':
 
     pool = mp.Pool(processes=6)
     with pool:
-        pool.map(estimate_one_seed, [i+9000 for i in range(20)])
+        pool.map(estimate_one_seed, [i+9040 for i in range(6)])
     pool.close()
 
 
