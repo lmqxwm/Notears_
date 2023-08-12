@@ -27,6 +27,10 @@ def notears_linear(X, lambda1, loss_type, W_true, max_iter=100, h_tol=1e-8, rho_
             R = X - M
             loss = 0.5 / X.shape[0] * (R ** 2).sum()
             G_loss = - 1.0 / X.shape[0] * X.T @ R
+            # R = X - M
+            # RR = np.clip(np.abs(R), a_min=0.1, a_max=None) - 0.1
+            # loss = 0.5 / X.shape[0] * (RR ** 2).sum()
+            # G_loss = - 1.0 / X.shape[0] * X.T @ RR * np.sign(R) * (RR != 0)
         elif loss_type == 'logistic':
             loss = 1.0 / X.shape[0] * (np.logaddexp(0, M) - X * M).sum()
             G_loss = 1.0 / X.shape[0] * X.T @ (sigmoid(M) - X)
