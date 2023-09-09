@@ -4,7 +4,6 @@ import scipy.optimize as sopt
 from scipy.special import expit as sigmoid
 import time
 
-
 def notears_linear(X, lambda1, loss_type, W_true, max_iter=100, h_tol=1e-8, rho_max=1e+16, w_threshold=0.3):
     """Solve min_W L(W; X) + lambda1 ‖W‖_1 s.t. h(W) = 0 using augmented Lagrangian.
 
@@ -20,6 +19,7 @@ def notears_linear(X, lambda1, loss_type, W_true, max_iter=100, h_tol=1e-8, rho_
     Returns:
         W_est (np.ndarray): [d, d] estimated DAG
     """
+
     def _loss(W):
         """Evaluate value and gradient of loss."""
         M = X @ W
@@ -101,16 +101,17 @@ def notears_linear(X, lambda1, loss_type, W_true, max_iter=100, h_tol=1e-8, rho_
         alpha += rho * h
         if h <= h_tol or rho >= rho_max:
             break
+    
     W_est = _adj(w_est)
-    W_est2 = W_est.copy()
-    W_est2[np.abs(W_est2) < w_threshold] = 0
+    # W_est2 = W_est.copy()
+    # W_est2[np.abs(W_est2) < w_threshold] = 0
 
     loss_est, loss_l1, obj_new, obj_dual, h = _losses(W_est)
-    loss_est2, loss_l12, obj_new2, obj_dual2, h2 = _losses(W_est2)
-    loss_est3, loss_l13, obj_new3, obj_dual3, h3 = _losses(W_true)
+    #loss_est2, loss_l12, obj_new2, obj_dual2, h2 = _losses(W_est2)
+    #loss_est3, loss_l13, obj_new3, obj_dual3, h3 = _losses(W_true)
 
-    return loss_est, loss_l1, obj_new, obj_dual, h, loss_est2, loss_l12, obj_new2, obj_dual2, h2, loss_est3, loss_l13, obj_new3, obj_dual3, h3
-
+    return loss_est, loss_l1, obj_new, obj_dual, h
+    #return loss_est, loss_l1, obj_new, obj_dual, h, loss_est2, loss_l12, obj_new2, obj_dual2, h2, loss_est3, loss_l13, obj_new3, obj_dual3, h3
     #return W_est
 
 
