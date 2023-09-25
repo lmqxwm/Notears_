@@ -27,13 +27,9 @@ def notears_linear(X, lambda1, loss_type, W_true, max_iter=100, h_tol=1e-8, rho_
             R = X - M
             loss = 0.5 / X.shape[0] * (R ** 2).sum()
             G_loss = - 1.0 / X.shape[0] * X.T @ R
-            # R = X - M
-            # RR = np.clip(np.abs(R), a_min=0.1, a_max=None) - 0.1
-            # loss = 0.5 / X.shape[0] * (RR ** 2).sum()
-            # G_loss = - 1.0 / X.shape[0] * X.T @ RR * np.sign(R) * (RR != 0)
         elif loss_type == 'logistic':
-            loss = 1.0 / X.shape[0] * (np.logaddexp(0, M) - X * M).sum()
-            G_loss = 1.0 / X.shape[0] * X.T @ (sigmoid(M) - X)
+            loss = np.float64(1.0 / X.shape[0] * (np.logaddexp(0, M) - X * M).sum())
+            G_loss = np.float64(1.0 / X.shape[0] * X.T @ (sigmoid(M) - X))
         elif loss_type == 'poisson':
             S = np.exp(M)
             loss = 1.0 / X.shape[0] * (S - X * M).sum()
@@ -50,7 +46,7 @@ def notears_linear(X, lambda1, loss_type, W_true, max_iter=100, h_tol=1e-8, rho_
         #     M = np.eye(d) + W * W / d  # (Yu et al. 2019)
         #     E = np.linalg.matrix_power(M, d - 1)
         #     h = (E.T * M).sum() - d
-        G_h = E.T * W * 2
+        G_h = np.float64(E.T * W * 2)
         return h, G_h
 
     def _adj(w):
@@ -67,17 +63,17 @@ def notears_linear(X, lambda1, loss_type, W_true, max_iter=100, h_tol=1e-8, rho_
             print("WRONG!!!!!!!!" + nowtime)
             with open("wrong.txt","a") as file:
                 file.write(nowtime + "\n")
-
-        obj = loss + 0.5 * rho * h * h + alpha * h + lambda1 * np.abs(w).sum()
-        G_smooth = G_loss + (rho * h + alpha) * G_h
+        
+        obj = np.float64(loss + 0.5 * rho * h * h + alpha * h + lambda1 * np.abs(w).sum())
+        G_smooth = np.float64(G_loss + (rho * h + alpha) * G_h)
         g_obj = np.concatenate((G_smooth + lambda1, - G_smooth + lambda1), axis=None)
         return obj, g_obj
     
-    def _losses(W):
+    def _losses(W1):
         """Evaluate value and gradient of augmented Lagrangian for doubled variables ([2 d^2] array)."""
-        loss_est, _ = _loss(W)
-        h, _ = _h(W)
-        loss_l1 = loss_est + lambda1 * np.abs(W).sum()
+        loss_est, _ = _loss(W1)
+        h, _ = _h(W1)
+        loss_l1 = loss_est + lambda1 * np.abs(W1).sum()
         obj_new = loss_l1 + 0.5 * rho * h * h 
         obj_dual = obj_new + alpha * h
         return loss_est, loss_l1, obj_new, obj_dual, h
@@ -110,9 +106,10 @@ def notears_linear(X, lambda1, loss_type, W_true, max_iter=100, h_tol=1e-8, rho_
     #loss_est2, loss_l12, obj_new2, obj_dual2, h2 = _losses(W_est2)
     #loss_est3, loss_l13, obj_new3, obj_dual3, h3 = _losses(W_true)
 
-    return loss_est, loss_l1, obj_new, obj_dual, h
+    #return loss_est, loss_l1, obj_new, obj_dual, h
+
     #return loss_est, loss_l1, obj_new, obj_dual, h, loss_est2, loss_l12, obj_new2, obj_dual2, h2, loss_est3, loss_l13, obj_new3, obj_dual3, h3
-    #return W_est
+    return W_est
 
 
 
