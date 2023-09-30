@@ -11,6 +11,8 @@ from itertools import permutations
 import random
 from functools import partial
 import linear2
+from golem import golem
+import tensorflow as tf
 
 # d (int): num of nodes
 # s0 (int): expected num of edges
@@ -146,6 +148,58 @@ def estimate_once_dagma(d, graph_type, sem_type, seed=1, lambda1=0, loss_type='l
     
     results.to_csv("./results_loss2/result_"+str(seed)+"_"+sem_type+"_"+str(d)+".csv", index=False)
 
+def estimate_once_golem(d, graph_type, sem_type, seed=1, lambda1=0, loss_type='l2', BB=100, noise=None):
+    print("=============processing seed=", seed, "================")
+    #utils.set_random_seed(seed)
+    n = d-1
+    s0 = n
+    print("n, d, s0, graph_type, sem_type, lambda1, loss_type", "-", n, d, s0, graph_type, sem_type, lambda1, loss_type)
+    
+    B_true = utils.simulate_dag(d, s0, graph_type)
+    W_true = utils.simulate_parameter(B_true)
+    B = np.min([math.factorial(d), BB])
+    results = np.zeros(B+2)
+
+    if noise == "normal":
+        noise_scale = np.abs(np.random.normal(1, 1, d))
+    elif noise == "uni":
+        noise_scale = np.random.uniform(1, 2, d)
+    else:
+        noise_scale = None
+    
+    X = utils.simulate_linear_sem(W_true, n, sem_type, noise_scale=noise_scale)
+
+    M = X @ W_true
+    if loss_type == 'l2':
+        R = X - M
+        0.5 * tf.math.reduce_sum(
+                tf.math.log(
+                    tf.math.reduce_sum(
+                        tf.square(R), axis=0
+                    )
+                )
+            ) - tf.linalg.slogdet(tf.eye(d) - W_true)[1]
+    elif loss_type == 'logistic':
+        results[0] = 1.0 / X.shape[0] * (np.logaddexp(0, M) - X * M).sum()
+    elif loss_type == 'poisson':
+        S = np.exp(M)
+        results[0] = 1.0 / X.shape[0] * (S - X * M).sum()
+    else:
+        raise ValueError('unknown loss type')
+    
+    #all_perm = list(permutations(range(X.shape[1])))
+    #utils.set_random_seed(seed+d)
+    inds = [i for i in range(d)]
+    results[1] = golem(X, 0, 5, False, seed=seed)
+    for i in range(B):
+         random.shuffle(inds)
+         results[i+2] = golem(X, 0, 5, False, seed=seed)
+
+    results = pd.DataFrame(results.T, columns=[
+    "loss_est"])
+    
+    results.to_csv("./results_loss2/result_"+str(seed)+"_"+sem_type+"_"+str(d)+".csv", index=False)
+
 
 if __name__ == '__main__':
     
@@ -153,11 +207,17 @@ if __name__ == '__main__':
     ds = [10, 20, 25, 30, 40, 50]
     pool = mp.Pool(processes=6)
     with pool:
-        pool.map(partial(estimate_template, 
-              seed=5037, lambda1=0), 
-              semtypes)
+        # pool.map(partial(estimate_template, 
+        #       seed=5037, lambda1=0), 
+        #       semtypes)
 
-        # for sm in range(len(semtypes)):
+        for sm in range(len(semtypes)):
+            pool.map(partial(estimate_once_golem, 
+              graph_type="ER", seed=5040, sem_type=semtypes[sm], lambda1=0, noise="normal"), 
+              ds)
+            pool.map(partial(estimate_once_golem, 
+              graph_type="ER", seed=5041, sem_type=semtypes[sm], lambda1=0, noise="uni"), 
+              ds)
         #     pool.map(partial(estimate_once, 
         #       graph_type="BP", seed=5026, sem_type=semtypes[sm], lambda1=0, noise="normal"),
         #       ds)
