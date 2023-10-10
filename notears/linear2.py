@@ -352,7 +352,8 @@ class DagmaLinear:
         self.h_final, _ = self._h(self.W_est)
         self.score_final, _ = self._score(self.W_est)
         #self.W_est[np.abs(self.W_est) < w_threshold] = 0
-        return self.score_final
+        #return self.score_final
+        return self.W_est, self.score_final
 
 def test():
     from . import utils

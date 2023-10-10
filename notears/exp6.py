@@ -12,7 +12,7 @@ import random
 from functools import partial
 import linear2
 from golem import golem
-import tensorflow as tf
+import tensorflow as tf 
 
 # d (int): num of nodes
 # s0 (int): expected num of edges
@@ -21,8 +21,14 @@ import tensorflow as tf
 # sem_type (str): gauss, exp, gumbel, uniform, logistic, poisson
 
 
-#def estimate_once(n, d, s0, graph_type, sem_type, seed=1, lambda1=0, loss_type='l2', B=100):
-def estimate_once(d, graph_type, sem_type, seed=1, lambda1=0, loss_type='l2', BB=100, noise=None):
+def restore_from_per(per_ind, W):
+    W_re = np.zeros(W.shape)
+    for i in range(len(per_ind)):
+        for j in range(len(per_ind)):
+            W_re[i, j] = W[per_ind[i], per_ind[j]]
+    return W_re
+
+def estimate_once_notears(d, graph_type, sem_type, seed=1, lambda1=0, loss_type='l2', BB=100, noise=None):
     print("=============processing seed=", seed, "================")
     #utils.set_random_seed(seed)
     n = d-1
@@ -32,7 +38,7 @@ def estimate_once(d, graph_type, sem_type, seed=1, lambda1=0, loss_type='l2', BB
     B_true = utils.simulate_dag(d, s0, graph_type)
     W_true = utils.simulate_parameter(B_true)
     B = np.min([math.factorial(d), BB])
-    results = np.zeros([5, B+2])
+    results = np.zeros([6, B+2])
 
     if noise == "normal":
         noise_scale = np.abs(np.random.normal(1, 1, d))
@@ -58,17 +64,21 @@ def estimate_once(d, graph_type, sem_type, seed=1, lambda1=0, loss_type='l2', BB
     #all_perm = list(permutations(range(X.shape[1])))
     #utils.set_random_seed(seed+d)
     inds = [i for i in range(d)]
-    results[:, 1] = linear.notears_linear(X, W_true=W_true, lambda1=0, loss_type=loss_type)
+    w_est, results[:5, 1] = linear.notears_linear(X, W_true=W_true, lambda1=0, loss_type=loss_type)
+    results[5, 1] = np.linalg.norm(w_est-W_true, ord='fro')
     for i in range(B):
-         random.shuffle(inds)
-         results[:, i+2] = linear.notears_linear(X[:, inds], W_true=W_true, lambda1=0, loss_type="l2")
-
+        random.shuffle(inds)
+        w_est, results[:5, i+2] = linear.notears_linear(X[:, inds], W_true=W_true, lambda1=0, loss_type="l2")
+        w_est_re = restore_from_per(inds, w_est)
+        results[5, 1] = np.linalg.norm(w_est_re-W_true, ord='fro')
+        
     results = pd.DataFrame(results.T, columns=[
-    "loss_est", "loss_l1", "obj_aug", "obj_dual", "h"])
+    "loss_est", "loss_l1", "obj_aug", "obj_dual", "h", "fro_dist"])
     
     results.to_csv("./results_loss2/result_"+str(seed)+"_"+sem_type+"_"+str(d)+".csv", index=False)
 
-def estimate_template(sem_type, seed=1, lambda1=0, loss_type='l2', BB=100):
+
+def estimate_template_dagma(sem_type, seed=1, lambda1=0, loss_type='l2', BB=100):
     print("=============processing seed=", seed, "================")
     d = 12
     #utils.set_random_seed(seed)
@@ -172,15 +182,7 @@ def estimate_once_golem(d, graph_type, sem_type, seed=1, lambda1=0, loss_type='l
     M = X @ W_true
     if loss_type == 'l2':
         R = X - M
-        0.5 * tf.math.reduce_sum(
-                tf.math.log(
-                    tf.math.reduce_sum(
-                        tf.square(R), axis=0
-                    )
-                )
-            ) - tf.linalg.slogdet(tf.eye(d) - W_true)[1]
-    elif loss_type == 'logistic':
-        results[0] = 1.0 / X.shape[0] * (np.logaddexp(0, M) - X * M).sum()
+        results[0] = 0.5 * np.sum(np.log(np.sum(R**2, axis=0))) - np.log(np.abs(np.linalg.det(np.eye(d)-W_true)))
     elif loss_type == 'poisson':
         S = np.exp(M)
         results[0] = 1.0 / X.shape[0] * (S - X * M).sum()
@@ -193,7 +195,7 @@ def estimate_once_golem(d, graph_type, sem_type, seed=1, lambda1=0, loss_type='l
     results[1] = golem(X, 0, 5, False, seed=seed)
     for i in range(B):
          random.shuffle(inds)
-         results[i+2] = golem(X, 0, 5, False, seed=seed)
+         results[i+2] = golem(X[:, inds], 0, 5, False, seed=seed)
 
     results = pd.DataFrame(results.T, columns=[
     "loss_est"])
@@ -204,7 +206,7 @@ def estimate_once_golem(d, graph_type, sem_type, seed=1, lambda1=0, loss_type='l
 if __name__ == '__main__':
     
     semtypes = ["gauss", "gumbel", "uniform"]
-    ds = [10, 20, 25, 30, 40, 50]
+    ds = [5, 10, 15, 20, 25, 30]
     pool = mp.Pool(processes=6)
     with pool:
         # pool.map(partial(estimate_template, 
