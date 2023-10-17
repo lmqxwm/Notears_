@@ -47,7 +47,7 @@ def notears_linear(X, lambda1, loss_type, W_true, max_iter=100, h_tol=1e-8, rho_
         #     M = np.eye(d) + W * W / d  # (Yu et al. 2019)
         #     E = np.linalg.matrix_power(M, d - 1)
         #     h = (E.T * M).sum() - d
-        G_h = np.float64(E.T * W * 2)
+        G_h = E.T * W * 2
         return h, G_h
 
     def _adj(w):
@@ -65,8 +65,8 @@ def notears_linear(X, lambda1, loss_type, W_true, max_iter=100, h_tol=1e-8, rho_
             with open("wrong.txt","a") as file:
                 file.write(nowtime + "\n")
         
-        obj = np.float64(loss + 0.5 * rho * h * h + alpha * h + lambda1 * np.abs(w).sum())
-        G_smooth = np.float64(G_loss + (rho * h + alpha) * G_h)
+        obj = loss + 0.5 * rho * h * h + alpha * h + lambda1 * np.abs(w).sum()
+        G_smooth = G_loss + (rho * h + alpha) * G_h
         g_obj = np.concatenate((G_smooth + lambda1, - G_smooth + lambda1), axis=None)
         return obj, g_obj
     
