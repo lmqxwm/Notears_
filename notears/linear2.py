@@ -210,7 +210,7 @@ class DagmaLinear:
             Gobj = G_score + mu * self.lambda1 * np.sign(W) + 2 * W * M.T + mask_inc * np.sign(W)
             
             ## Adam step
-            grad = self._adam_update(Gobj, iter, beta_1, beta_2)
+            grad = self._adam_update(Gobj, iter, beta_1, beta_2) + np.random.normal(0, np.sqrt(2*lr), size=Gobj.shape)
             W -= lr * grad
             W *= mask_exc
                 
